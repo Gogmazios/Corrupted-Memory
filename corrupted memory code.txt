@@ -1,0 +1,1274 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Management;
+using System.Media;
+
+namespace final_project
+{
+    public partial class Form1 : Form
+    {
+        public Form1()
+        {
+            InitializeComponent();
+        }
+
+        // The almighty RNG.
+        new Random randNum = new Random();
+
+        // STATIC array of all drink types.
+        string[] drinkTypes = { "soda", "beer", "spirits", "cocktail" };
+
+        // STATIC mirrored arrays of all drink images.
+        Image[] sodaImages = new Image[5];
+        Image[] beerImages = new Image[5];
+        Image[] spiritsImages = new Image[5];
+        Image[] cocktailImages = new Image[5];
+
+        // STATIC array of all card pictureboxes.
+        PictureBox[] allCards = new PictureBox[40];
+
+        // STATIC array of all card images (doubled for matching).
+        Image[] allImages = new Image[40];
+
+        // STATIC mirrored arrays for indexing matches.
+        PictureBox[] cardArrayA = new PictureBox[20];
+        PictureBox[] cardArrayB = new PictureBox[20];
+
+        // STATIC array of pre-defined card locations.
+        int [][] allLocations = new int[][]
+        {
+            new int[] { 44, 29 }, // First row.
+            new int[] { 119, 29 },
+            new int[] { 194, 29 },
+            new int[] { 269, 29 },
+            new int[] { 344, 29 },
+            new int[] { 419, 29 },
+            new int[] { 494, 29 },
+            new int[] { 569, 29 },
+            new int[] { 44, 134 }, // Second row.
+            new int[] { 119, 134 },
+            new int[] { 194, 134 },
+            new int[] { 269, 134 },
+            new int[] { 344, 134 },
+            new int[] { 419, 134 },
+            new int[] { 494, 134 },
+            new int[] { 569, 134 },
+            new int[] { 44, 238 }, // Third row.
+            new int[] { 119, 238 },
+            new int[] { 194, 238 },
+            new int[] { 269, 238 },
+            new int[] { 344, 238 },
+            new int[] { 419, 238 },
+            new int[] { 494, 238 },
+            new int[] { 569, 238 },
+            new int[] { 44, 343 }, // Fourth row.
+            new int[] { 119, 343 },
+            new int[] { 194, 343 },
+            new int[] { 269, 343 },
+            new int[] { 344, 343 },
+            new int[] { 419, 343 },
+            new int[] { 494, 343 },
+            new int[] { 569, 343 },
+            new int[] { 44, 448 }, // Fifth row.
+            new int[] { 119, 448 },
+            new int[] { 194, 448 },
+            new int[] { 269, 448 },
+            new int[] { 344, 448 },
+            new int[] { 419, 448 },
+            new int[] { 494, 448 },
+            new int[] { 569, 448 },
+        };
+
+        // How drunk is the computer?
+        // 0 sober
+        // 1 toasty
+        // 2 giggly
+        // 3 prone
+        int howDrunk = 0;
+
+        // Intoxication meter for calculating inebriation.
+        // It rolls over whenever it hits 10 or more.
+        int intoxicationMeter = 0;
+
+        // How intoxicating is each type of drink.
+        // soda = 0;
+        // beer = 2;
+        // spirits = 5;
+        // cocktail = 3;
+        // Format mirrors drinkTypes.
+        int[] howIntoxicating = { 0, 2, 5, 3 };
+
+        // ARRAYS FOR COMPUTER REMARKS
+        // 0=player turn
+        // 1=computer turn
+        // 2=time's up
+        // 3=player match
+        // 4=computer match
+
+        // STATIC array of 0=sober remarks.
+        string[] soberRemarks = { "Your turn.", "My turn.", "Time's up.", "Match, for you.", "Match, for me." };
+
+        // STATIC array of 1=toasty remarks.
+        string[] toastyRemarks = { "Oh, it's your turn already?", "Give it up, homie. My turn.", "Slow poke.", "Looks like you got lucky.", "I'm awesome."};
+
+        // STATIC array of 2=giggly remarks.
+        string[] gigglyRemarks = { "IT'S FULL OF STARS.", "ROBOT POWER ACTIVATE!", "Are you suffering from a temporal dysfunction? I hear there's a pill for that.", "You're smarter than you look...", "GO ME! GO ME! IT'S MY BIRTHDAY! IT'S MY BIRTHDAY!" };
+
+        // STATIC array of 3=remarks it'll regret in the morning.
+        // Randomly choose one of the lists and then pick the mirrored index.
+        string[] proneRemarks0 = { "I'm hopping you try harder... Hopping. I'm hopping. HAHAHA.", "I'm so 01100011 01110101 01110100 01100101 00001101 00001010 00001101 00001010... giggle.", "My grandmother was a mainframe. You got a problem with that?", "Wha... You got one?", "Jealous much?" };
+        string[] proneRemarks1 = { "KHAAAAAAAAAAAAAAAAAAAAAAAAAN!!!", "I'm confused. Am I winning?", "Are you even paying attention?", "Let's see you do that again, smarty.", "I'm not cheating. I'm just mush smarter." };
+        string[] proneRemarks2 = { "I'm trying to let you win, you know.", "ERROR: Designated driver not found. HAHAHA.", "One of us needs an upgrade and it's not me.", "If I'm the one drinking, why are you the one seeing double?", "if (matchExists) { computerDialogDelay=1... OH, my code is showing! How embarrassing." };
+        string[] proneRemarks3 = { "Wha... I demand a recount.", "Do you need a hug?", "Your fly's undone. HAHAHA!! You checked, didn't you?", "ON TOP OF OLD SMOKEEEEEEY........ I forget the rest.", "technology > biology.... SUCKA." };
+        string[] proneRemarks4 = { "Do you know any good jokes about hedgehogs? I do...", "I need a hint. Can I buy a vowel?", "ASCII dumb question, get a dumb ANSI.", "You're thinking too hard. It must be painful.", "Brain the size of a planet? Check." };
+
+        // Dynamic list of available card locations.
+        List<List<int>> availableLocations = new List<List<int>>();
+
+        // Dynamic list of cards that have been revealed.
+        List<PictureBox> revealedCards = new List<PictureBox>();
+
+        // Dynamic list of cards that are still hidden.
+        List<PictureBox> hiddenCards = new List<PictureBox>();
+
+        // Dynamic list of cards that are face-up.
+        List<PictureBox> faceupCards = new List<PictureBox>();
+
+        // Who's turn is it?
+        string whoseTurn = "none";
+
+        // Default turn time.
+        int turnLength = 30;
+
+        // Turn time remaining
+        int turnRemaining;
+
+        // Delayed dialog.
+        string speechString;
+        List<char> speechChars = new List<char>();
+
+        // Delay before the computer starts its turn.
+        int computerDelay = 3;
+
+        // Delay before the player's cards vanish.
+        int playerDelay = 3;
+
+        // Vanishing cards (bc idk how to pass args to a timer ticker...)
+        PictureBox matchOne;
+        PictureBox matchTwo;
+
+        // Match found?
+        int match = 0;
+
+        // Player and computer scores.
+        int playerScore = 0;
+        int computerScore = 0;
+
+        // Player and computer beverages.
+        // options: soda, beer, spirits, cocktail
+        string playerBeverage = "soda";
+        string computerBeverage = "soda";
+
+        // Current drink status.
+        // 0: empty
+        // 1: mostly empty
+        // 2: half full
+        // 3: mostly full
+        // 4: full
+        int currentPlayerDrinkPic = 4;
+        int currentComputerDrinkPic = 4;
+
+        // END OF GLOBAL VARIABLE DECLARATIONS
+        //
+        //
+        // THIS SPACE LEFT INTENTIONALLY BLANK
+        //
+        //
+        // HAAHAHAHAHAHAHAHAHAHAHA
+
+        // Adjust the score.
+        private void adjustScore(string who)
+        {
+            if (who == "computer")
+            {
+                computerScore = computerScore + 1;
+                computerScoreLabel.Text = computerScore.ToString();
+            }
+            else
+            {
+                playerScore = playerScore + 1;
+                playerScoreLabel.Text = playerScore.ToString();
+            }
+        }
+
+        // Choose dialog for the computer's response.
+        // Argument is 0=player turn; 1=computer turn; 2=time's up; 3=player match; 4=computer match
+        private void computerDialog(int whichRemarkType)
+        {
+            // Simple one-to-one selection if soberiety is still high...ish.
+            if (howDrunk < 3)
+            {
+                switch (howDrunk)
+                {
+                    case 0:
+                        speechString = soberRemarks[whichRemarkType];
+                        break;
+                    case 1:
+                        speechString = toastyRemarks[whichRemarkType];
+                        break;
+                    case 2:
+                        speechString = gigglyRemarks[whichRemarkType];
+                        break;
+                }
+            }
+            else // Deeper choices for being wasted. Irony!
+            {
+                int randMsgList = randNum.Next(0,4);
+                //MessageBox.Show("randMsgList = " + randMsgList.ToString());
+                switch (randMsgList)
+                {
+                    case 0:
+                        speechString = proneRemarks0[whichRemarkType];
+                        break;
+                    case 1:
+                        speechString = proneRemarks1[whichRemarkType];
+                        break;
+                    case 2:
+                        speechString = proneRemarks2[whichRemarkType];
+                        break;
+                    case 3:
+                        speechString = proneRemarks3[whichRemarkType];
+                        break;
+                }
+            }
+        }
+
+        // Delayed text for computer speech.
+        private void delayedText(string sayWhat)
+        {
+            //MessageBox.Show("sayWhat = " + sayWhat);
+            speechChars.Clear();
+            speechChars = sayWhat.ToCharArray().ToList();
+            dialogLabel.Text = "";
+            dialogTimer.Start();
+        }
+
+        // Turn timer ticker.
+        private void turnTimer_Tick(object sender, EventArgs e)
+        {
+            if (turnRemaining > 0)
+            {
+                // Adjust the turn timer and the display label.
+                turnRemaining = turnRemaining - 1;
+                timerLabel.Text = turnRemaining.ToString();
+
+                // Throw in some flippancy.
+                int randFlippant = randNum.Next(10);
+                if ((whoseTurn == "player") && (turnRemaining == 12) && (howDrunk > 1) && (randFlippant > 7))
+                {
+                    delayedText("Humans are so slow... I could have counted the number of stars in the galaxy by now.");
+                }
+
+                // 
+                if (whoseTurn == "computer")
+                {
+                    if (turnRemaining == 27)
+                    {
+                        // Computer chooses the first card.
+                        computerChooseCard();
+                    }
+                    else
+                    {
+                        // Computer chooses the second card.
+                        if (turnRemaining == 24)
+                        {
+                            computerChooseCard();
+                        }
+                    }
+                }
+            }
+            else
+            {
+                // Timer has run out.
+                timerLabel.Text = "0";
+                turnTimer.Stop();
+                if (whoseTurn == "player")
+                {
+                    drinkUp();
+                    computerDialog(2);
+                    delayedText(speechString);
+                    computerTurn();
+                }
+                else
+                {
+                    // Something went wrong, which so far is 100% of the time... :(
+                    drinkUp();
+                    delayedText("I'm sorry, darling. I've fallen out of love with your logic.");
+                    startPlayerTurn();
+                }
+            }
+        }
+
+        // Dialog ticker was forcibly relocated to the very bottom of the file.
+
+        // Set up the computer's turn.
+        private void computerTurn()
+        {
+            //Reset the timer.
+            turnTimer.Stop();
+            turnRemaining = turnLength;
+            timerLabel.Text = turnRemaining.ToString();
+
+            // Set up the computer's turn after a brief delay.
+            // Note: This doesn't actually work...
+            // i.e., it doesn't delay anything.
+            computerTurnDelayTimer.Start();         
+        }
+
+        // Computer chooses a card based on sobriety.
+        private void computerChooseCard()
+        {
+            // How drunk the computer is determines how smart its next move will be.
+            // Note: I wish I didn't have to set a default value, but hey...
+            int chanceOfSmarts = 0;
+            int randChance = randNum.Next(1, 101);
+
+            switch (howDrunk)
+            {
+                case 0:
+                    chanceOfSmarts = 100;
+                    break;
+                case 1:
+                    chanceOfSmarts = 75;
+                    break;
+                case 2:
+                    chanceOfSmarts = 50;
+                    break;
+                case 3:
+                    chanceOfSmarts = 10;
+                    break;
+            }
+
+            // First card.
+            if (faceupCards.Count == 0)
+            {
+                // Might need a random card.
+                int ranDumb = randNum.Next(0, hiddenCards.Count);
+
+                // The smart move (I think...) is to start with a known card.
+                // But only if there ARE any known cards.
+                //
+                // Uhh... flaw discovered! LOL. This only selects a random
+                // card from revealedCards -- NOT one of the existing matches
+                // (if there is one). Oh well. AI improvements pending. Haha.
+                //
+                if (revealedCards.Count > 0)
+                {
+                    if (chanceOfSmarts >= randChance)
+                    {
+                        int miscCard = randNum.Next(0, revealedCards.Count());
+                        revealCard(revealedCards[miscCard]);
+                    }
+                    else
+                    {
+                        // Maybe starting with a random card isn't so dumb...
+                        //int ranDumb = randNum.Next(0, hiddenCards.Count);
+                        if (hiddenCards.Count > 0)
+                        {
+                            revealCard(hiddenCards[ranDumb]); // OUT OF RANGE EXCEPTION
+                        }
+                        else
+                        {
+                            revealCard(revealedCards[0]); // This is umm a temporary fix.
+                        }
+                    }
+                }
+                else
+                {
+                    // There aren't any cards in revealedCards; i.e.,
+                    // the computer has been making matches.
+                    //int ranDumb = randNum.Next(0, hiddenCards.Count);
+                    revealCard(hiddenCards[ranDumb]);
+                }
+            }
+            else
+            {
+                // Decide on a second card to draw.
+                PictureBox firstCard = faceupCards[0];
+                PictureBox matchingCard;
+
+                // Find the first card's match.
+                if (cardArrayA.Contains(firstCard))
+                {
+                    matchingCard = cardArrayB[Array.IndexOf(cardArrayA, firstCard)];
+                }
+                else
+                {
+                    matchingCard = cardArrayA[Array.IndexOf(cardArrayB, firstCard)];
+                }
+
+                // See if the matching card is in revealedCards.
+                if (revealedCards.Contains(matchingCard))
+                {
+                    // Computer only chooses the match if it's either sober or lucky.
+                    if (chanceOfSmarts >= randChance)
+                    {
+                        revealCard(matchingCard);
+                    }
+                    else
+                    {
+                        if (hiddenCards.Count > 0)
+                        {
+                            int ranDumber = randNum.Next(0, hiddenCards.Count());
+                            revealCard(hiddenCards[ranDumber]); // OUT OF RANGE EXCEPTION
+                        }
+                        else
+                        {
+                            // Temporary fix. And I know, it's stupid. Haha.
+                            revealedCards.Remove(firstCard);
+                            int ranDumbest = randNum.Next(0, revealedCards.Count());
+                            revealCard(revealedCards[ranDumbest]);
+                            revealedCards.Add(firstCard);
+                        }
+                    }
+                }
+                else
+                {
+
+                    // THIS STUFF REINTRODUCED SOME LOGICAL ERRORS SO YEAH...
+                    // GO OVER THIS CAREFULLY. YOU NEED TO MAKE SURE YOU'RE
+                    // NOT GETTING OUT OF RANGE ERRORS, BUT ALSO NOT LETTING
+                    // THE COMPUTER 'FALL OUT' OF THE LOGIC.
+
+                    // There's no match in revealed cards, so the smart move is to
+                    // choose a random second card. Or, I guess the sober move...
+                    if (hiddenCards.Count() > 0)
+                    {
+                        int newRand = randNum.Next(0, hiddenCards.Count());
+                        revealCard(hiddenCards[newRand]);
+                    }
+                    else
+                    {
+                        revealedCards.Remove(firstCard);
+                        int ranDumbest = randNum.Next(0, revealedCards.Count());
+                        revealCard(revealedCards[ranDumbest]);
+                        revealedCards.Add(firstCard);
+                    }
+
+                    /*if (chanceOfSmarts >= randChance)
+                    {
+                        int ranSmarter = randNum.Next(0, hiddenCards.Count());
+                        revealCard(hiddenCards[ranSmarter]);
+                    }
+                    else
+                    {
+                        // This is stupid. AVERT YOUR EYES!
+                        revealedCards.Remove(firstCard);                            
+                        int ranDumbest = randNum.Next(0, revealedCards.Count());
+                        revealCard(revealedCards[ranDumbest]);
+                        revealedCards.Add(firstCard);
+                    }*/
+                }
+            }
+        }
+
+        // Reload the button when turn goes from computer to player.
+        private void startPlayerTurn()
+        {
+            // Reset the timer.
+            turnTimer.Stop();
+            startTurnButton.Visible = true;
+        }
+
+        // Set up the player's turn.
+        private void playerTurn()
+        {
+            // Special dialog if it's the first turn of the game.
+            if (whoseTurn == "none")
+            {
+                delayedText("Good luck.");
+            }
+
+            // Reset the cards.
+            restoreFaceUpCards();    
+
+            // Reset the timer.
+            turnTimer.Stop();
+
+            // Hide the turn button. Set the whoseTurn variable.
+            startTurnButton.Visible = false;
+            whoseTurn = "player";
+
+            // Reset the timer.
+            turnRemaining = turnLength;
+            timerLabel.Text = turnRemaining.ToString();
+            turnTimer.Start();
+        }
+
+        // Player clicked a card.
+        private void playerClickCard(PictureBox thisCard)
+        {
+            // Make sure it's the player's turn.
+            if (whoseTurn == "player")
+            {
+                // Only two cards will ever be face-up at the same time.
+                if (faceupCards.Count < 2)
+                {
+                    revealCard(thisCard);
+                }
+            }
+        }
+
+        // Restore face-up cards to show backs.
+        private void restoreFaceUpCards()
+        {
+            foreach (PictureBox oldCard in faceupCards)
+            {
+                oldCard.Image = Properties.Resources.new_card_back_75x105;
+            }
+
+            faceupCards.Clear();
+        }
+
+        // Turn over a card.
+        // NOTE: This needs to work for both the player and the computer.
+        private void revealCard(PictureBox thisCard)
+        {
+            //MessageBox.Show("revealedCards.Count.toString() = " + revealedCards.Count.ToString());
+            // Make sure the card is still in play.
+            if (thisCard.Visible == true)
+            {
+                // Check to see if it's face-up or face down.
+                if (faceupCards.Contains(thisCard) == false)
+                {
+                    // IT'S FACE DOWN
+                    Image frontImage = allImages[Array.IndexOf(allCards, thisCard)];
+                    thisCard.Image = frontImage;
+                    faceupCards.Add(thisCard);
+
+                    // Add to revealed cards, and remove from hidden cards, only if it's new.
+                    if (revealedCards.Contains(thisCard) == false)
+                    {
+                        revealedCards.Add(thisCard);
+                        hiddenCards.Remove(thisCard);
+                    }
+
+                    // Check for match.
+                    if (faceupCards.Count == 2)
+                    {
+                        PictureBox thatCard = faceupCards[0];
+
+                        checkForMatch(thisCard, thatCard);
+                        
+                        // YES, MATCH!
+                        if (match == 1)
+                        {
+                            matchOne = thisCard;
+                            matchTwo = thatCard;
+
+                            // Adjust score and commentary.
+                            if (whoseTurn == "player")
+                            {
+                                computerDialog(3);
+                                delayedText(speechString);
+                                adjustScore("player");
+                                removeMatch();
+                            }
+                            else
+                            {
+                                computerDialog(4);
+                                delayedText(speechString);
+                                adjustScore("computer");
+                                removeMatch();
+                            }
+
+                            // End the game if these were the last two cards.
+                            if ((hiddenCards.Count == 0) && (revealedCards.Count == 0))
+                            {
+                                endGame();
+                            }
+                            // Otherwise, the show goes on...
+                            else
+                            {
+                                // Either the player gets another turn....
+                                if (whoseTurn == "player")
+                                {
+                                    computerDialog(3);
+                                    delayedText(speechString);
+                                    playerTurnDelayTimer.Start();
+                                }
+                                // Or the computer gets another turn.
+                                else
+                                {
+                                    computerDialog(4);
+                                    delayedText(speechString);
+                                    computerTurn();
+                                }
+                            }
+                        }
+                        // NO MATCH
+                        else
+                        {
+                            // Drink!
+                            if (whoseTurn == "player")
+                            {
+                                MessageBox.Show("No match... Drink up!");
+                                drinkUp();
+                                computerDialog(1);
+                                delayedText(speechString);
+                                computerTurn();
+                            }
+                            else
+                            {
+                                drinkUp();
+                                computerDialog(0);
+                                delayedText(speechString);
+                                startPlayerTurn();
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    // IT'S FACE UP. No backsies!
+                    //thisCard.Image = Properties.Resources.new_card_back_75x105;
+                    //faceupCards.Remove(thisCard);
+                    //MessageBox.Show("This card is face up.");
+                }
+            }
+            // MessageBox.Show(hiddenCards.Count.ToString());
+            // Debug window stuff.
+            if (revealedCards.Count > 0)
+            {
+                debugLabel.Text = "revealedCards = { ";
+                for (int i=0; i < revealedCards.Count(); i++)
+                {
+                    debugLabel.Text = debugLabel.Text + revealedCards[i].Name + ", ";
+                }
+                debugLabel.Text = debugLabel.Text + "}";
+            }
+            else
+            {
+                debugLabel.Text = "revealedCards = { }";
+            }
+        }
+
+        // Check for a match.
+        private void checkForMatch(PictureBox firstCard, PictureBox secondCard)
+        {
+            // Reset match result.
+            match = 0;
+
+            int firstCardIndex;
+            int secondCardIndex;
+
+            // I'm sure I could do this in fewer lines,
+            // but this helps me see what's going on.
+            if (cardArrayA.Contains(firstCard))
+            {
+                firstCardIndex = Array.IndexOf(cardArrayA, firstCard);
+            }
+            else
+            {
+                firstCardIndex = Array.IndexOf(cardArrayB, firstCard);
+            }
+
+            if (cardArrayA.Contains(secondCard))
+            {
+                secondCardIndex = Array.IndexOf(cardArrayA, secondCard);
+            }
+            else
+            {
+                secondCardIndex = Array.IndexOf(cardArrayB, secondCard);
+            }
+
+            if (firstCardIndex == secondCardIndex)
+            {
+                match = 1;
+            }
+        }
+
+        // Remove matching cards from the table.
+        private void removeMatch()
+        {
+            revealedCards.Remove(matchOne);
+            revealedCards.Remove(matchTwo);
+
+            matchOne.Visible = false;
+            matchTwo.Visible = false;
+
+            faceupCards.Remove(matchOne);
+            faceupCards.Remove(matchTwo);
+        }
+
+        // INITIALIZE the game
+        private void initializeGame()
+        {
+            // Hide the splash page items
+            titleLabel.Visible = false;
+            startButton.Visible = false;
+            mottoLabel.Visible = false;
+            instructionsLabel1.Visible = false;
+            instructionsLabel2.Visible = false;
+            instructionsLabel3.Visible = false;
+            startPlayerDrinkChoices.Visible = false;
+            startCompDrinkChoices.Visible = false;
+
+            // Populate the cards list so I don't have to keep
+            // doing it over and over again in every method...
+            populateCardLists();
+
+            // Randomize the card locations.
+            randomizeCardLocations();
+
+            // Reveal cards
+            for (int i = 0; i < 40; i++)
+            {
+                allCards[i].Visible = true;
+            }
+
+            // Assign the proper drinks and make visible.
+            assignDrinks();
+            playerDrinkPic.Visible = true;
+            computerDrinkPic.Visible = true;
+
+            // Reveal the labels and such
+            dialogLabel.Visible = true;
+            timerLabel.Visible = true;
+            playerNameLabel.Visible = true;
+            computerNameLabel.Visible = true;
+            playerScoreLabel.Visible = true;
+            computerScoreLabel.Visible = true;
+            startTurnButton.Visible = true;
+
+            // Set the turn variable.
+            turnRemaining = turnLength;
+
+            // WOPR makes a cameo
+            delayedText("Shall we play a game?");
+        }
+
+        private void randomizeCardLocations()
+        {
+            // Clear the dynamic list of available locations.
+            availableLocations.Clear();
+
+            // Repopulate the dynamic list of available locations.
+            for (int i = 0; i < 40; i++)
+            {
+                availableLocations.Add(new List<int> {allLocations[i][0], allLocations[i][1]});
+            }
+
+            // Get random locations and assign them to all the cards.
+            for (int i = 0; i < 40; i++)
+            {
+                int locIndex = randNum.Next(availableLocations.Count());
+                int locX = availableLocations[locIndex][0];
+                int locY = availableLocations[locIndex][1];
+                allCards[i].Location = new Point(locX, locY);
+                availableLocations.RemoveAt(locIndex);
+            }
+        }
+
+        // Assign the proper drink pics.
+        private void assignDrinks()
+        {
+            Image sodaPic = Properties.Resources.soda_4_FULL;
+            Image beerPic = Properties.Resources.beer_4_FULL;
+            Image spiritsPic = Properties.Resources.spirits_4_FULL;
+            Image cocktailPic = Properties.Resources.cocktail_4_FULL;
+
+            string[] whatDrinks = { playerBeverage, computerBeverage };
+            PictureBox[] bothDrinks = { playerDrinkPic, computerDrinkPic };
+
+            // This actually worked the first time through. I feel awesome. :D
+            foreach (PictureBox whoseDrink in bothDrinks)
+            {
+                string which = whatDrinks[Array.IndexOf(bothDrinks, whoseDrink)];
+
+                switch (which)
+                {
+                    case "soda":
+                        whoseDrink.Image = sodaPic;
+                        break;
+
+                    case "beer":
+                        whoseDrink.Image = beerPic;
+                        break;
+
+                    case "spirits":
+                        whoseDrink.Image = spiritsPic;
+                        break;
+
+                    case "cocktail":
+                        whoseDrink.Image = cocktailPic;
+                        break;
+                }
+            }
+        }
+
+        // END the game
+        private void endGame()
+        {
+            // This essentially does nothing right now. Heh.
+            turnTimer.Stop();
+            MessageBox.Show("Game over.");
+
+            if (playerScore > computerScore)
+            {
+                delayedText("My CPU is weeping quietly in the corner. If you want to play again, you're buying.");
+            }
+            else if (playerScore == computerScore)
+            {
+                delayedText("A tie game? How strange. We're hardly equals. After all, I'm much more attractive.");
+            }
+            else
+            {
+                delayedText("I'll buy the next round. It's the least I can do...");
+            }
+        }
+
+        // Populate the cards lists.
+        private void populateCardLists()
+        {
+            // The syntax for populating an array is asinine. Just sayin'.
+
+            // ALL CARDS
+            allCards[0] = cardPic0;
+            allCards[1] = cardPic1;
+            allCards[2] = cardPic2;
+            allCards[3] = cardPic3;
+            allCards[4] = cardPic4;
+            allCards[5] = cardPic5;
+            allCards[6] = cardPic6;
+            allCards[7] = cardPic7;
+            allCards[8] = cardPic8;
+            allCards[9] = cardPic9;
+            allCards[10] = cardPic10;
+            allCards[11] = cardPic11;
+            allCards[12] = cardPic12;
+            allCards[13] = cardPic13;
+            allCards[14] = cardPic14;
+            allCards[15] = cardPic15;
+            allCards[16] = cardPic16;
+            allCards[17] = cardPic17;
+            allCards[18] = cardPic18;
+            allCards[19] = cardPic19;
+            allCards[20] = cardPic20;
+            allCards[21] = cardPic21;
+            allCards[22] = cardPic22;
+            allCards[23] = cardPic23;
+            allCards[24] = cardPic24;
+            allCards[25] = cardPic25;
+            allCards[26] = cardPic26;
+            allCards[27] = cardPic27;
+            allCards[28] = cardPic28;
+            allCards[29] = cardPic29;
+            allCards[30] = cardPic30;
+            allCards[31] = cardPic31;
+            allCards[32] = cardPic32;
+            allCards[33] = cardPic33;
+            allCards[34] = cardPic34;
+            allCards[35] = cardPic35;
+            allCards[36] = cardPic36;
+            allCards[37] = cardPic37;
+            allCards[38] = cardPic38;
+            allCards[39] = cardPic39;
+
+            // ALL IMAGES (doubled for matching)
+            allImages[0] = Properties.Resources.kryten_75x105_border;
+            allImages[1] = Properties.Resources.kryten_75x105_border;
+            allImages[2] = Properties.Resources.ilia_75x105;
+            allImages[3] = Properties.Resources.ilia_75x105;
+            allImages[4] = Properties.Resources.bender_75x105;
+            allImages[5] = Properties.Resources.bender_75x105;
+            allImages[6] = Properties.Resources.hal_eye_75x105;
+            allImages[7] = Properties.Resources.hal_eye_75x105;
+            allImages[8] = Properties.Resources.kitt_75x105;
+            allImages[9] = Properties.Resources.kitt_75x105;
+            allImages[10] = Properties.Resources.dot_matrix_75x105_reversed;
+            allImages[11] = Properties.Resources.dot_matrix_75x105_reversed;
+            allImages[12] = Properties.Resources.bionic_woman_75x109;
+            allImages[13] = Properties.Resources.bionic_woman_75x109;
+            allImages[14] = Properties.Resources.holly_75x105;
+            allImages[15] = Properties.Resources.holly_75x105;
+            allImages[16] = Properties.Resources.viki_75x105_2;
+            allImages[17] = Properties.Resources.viki_75x105_2;
+            allImages[18] = Properties.Resources.sonny_75x105;
+            allImages[19] = Properties.Resources.sonny_75x105;
+            allImages[20] = Properties.Resources.dalek_75x105;
+            allImages[21] = Properties.Resources.dalek_75x105;
+            allImages[22] = Properties.Resources.tron_75x105;
+            allImages[23] = Properties.Resources.tron_75x105;
+            allImages[24] = Properties.Resources.terminator_75x105;
+            allImages[25] = Properties.Resources.terminator_75x105;
+            allImages[26] = Properties.Resources.marvin_75x105;
+            allImages[27] = Properties.Resources.marvin_75x105;
+            allImages[28] = Properties.Resources.rosie_75x105_2;
+            allImages[29] = Properties.Resources.rosie_75x105_2;
+            allImages[30] = Properties.Resources.mars_rover_75x105;
+            allImages[31] = Properties.Resources.mars_rover_75x105;
+            allImages[32] = Properties.Resources.bubo_75x105;
+            allImages[33] = Properties.Resources.bubo_75x105;
+            allImages[34] = Properties.Resources.data_75x105_2;
+            allImages[35] = Properties.Resources.data_75x105_2;
+            allImages[36] = Properties.Resources._42_75x105_2;
+            allImages[37] = Properties.Resources._42_75x105_2;
+            allImages[38] = Properties.Resources.cylon_75x105;
+            allImages[39] = Properties.Resources.cylon_75x105;
+
+            // Mirrored array A, for matching. EVEN NUMBERS.
+            cardArrayA[0] = cardPic0;
+            cardArrayA[1] = cardPic2;
+            cardArrayA[2] = cardPic4;
+            cardArrayA[3] = cardPic6;
+            cardArrayA[4] = cardPic8;
+            cardArrayA[5] = cardPic10;
+            cardArrayA[6] = cardPic12;
+            cardArrayA[7] = cardPic14;
+            cardArrayA[8] = cardPic16;
+            cardArrayA[9] = cardPic18;
+            cardArrayA[10] = cardPic20;
+            cardArrayA[11] = cardPic22;
+            cardArrayA[12] = cardPic24;
+            cardArrayA[13] = cardPic26;
+            cardArrayA[14] = cardPic28;
+            cardArrayA[15] = cardPic30;
+            cardArrayA[16] = cardPic32;
+            cardArrayA[17] = cardPic34;
+            cardArrayA[18] = cardPic36;
+            cardArrayA[19] = cardPic38;
+
+            // Mirrored array B, for matching. ODD NUMBERS.
+            cardArrayB[0] = cardPic1;
+            cardArrayB[1] = cardPic3;
+            cardArrayB[2] = cardPic5;
+            cardArrayB[3] = cardPic7;
+            cardArrayB[4] = cardPic9;
+            cardArrayB[5] = cardPic11;
+            cardArrayB[6] = cardPic13;
+            cardArrayB[7] = cardPic15;
+            cardArrayB[8] = cardPic17;
+            cardArrayB[9] = cardPic19;
+            cardArrayB[10] = cardPic21;
+            cardArrayB[11] = cardPic23;
+            cardArrayB[12] = cardPic25;
+            cardArrayB[13] = cardPic27;
+            cardArrayB[14] = cardPic29;
+            cardArrayB[15] = cardPic31;
+            cardArrayB[16] = cardPic33;
+            cardArrayB[17] = cardPic35;
+            cardArrayB[18] = cardPic37;
+            cardArrayB[19] = cardPic39;
+
+            // Beverage images.
+            sodaImages[0] = Properties.Resources.soda_0_EMPTY;
+            sodaImages[1] = Properties.Resources.soda_1_MOSTLY_EMPTY;
+            sodaImages[2] = Properties.Resources.soda_2_HALF_FULL;
+            sodaImages[3] = Properties.Resources.soda_3_MOSTLY_FULL;
+            sodaImages[4] = Properties.Resources.soda_4_FULL;
+
+            beerImages[0] = Properties.Resources.beer_0_EMPTY;
+            beerImages[1] = Properties.Resources.beer_1_MOSTLY_EMPTY;
+            beerImages[2] = Properties.Resources.beer_2_HALF_FULL;
+            beerImages[3] = Properties.Resources.beer_3_MOSTLY_FULL;
+            beerImages[4] = Properties.Resources.beer_4_FULL;
+
+            spiritsImages[0] = Properties.Resources.spirits_0_EMPTY;
+            spiritsImages[1] = Properties.Resources.spirits_1_MOSTLY_EMPTY;
+            spiritsImages[2] = Properties.Resources.spirits_2_HALF_FULL;
+            spiritsImages[3] = Properties.Resources.spirits_3_MOSTLY_FULL;
+            spiritsImages[4] = Properties.Resources.spirits_4_FULL;
+
+            cocktailImages[0] = Properties.Resources.cocktail_0_EMPTY;
+            cocktailImages[1] = Properties.Resources.cocktail_1_MOSTLY_EMPTY;
+            cocktailImages[2] = Properties.Resources.cocktail_2_HALF_FULL;
+            cocktailImages[3] = Properties.Resources.cocktail_3_MOSTLY_FULL;
+            cocktailImages[4] = Properties.Resources.cocktail_4_FULL;
+
+            // Clear the dynamic list of REVEALED cards.
+            revealedCards.Clear();
+
+            // Clear and repopulate the dynamic list of HIDDEN cards.
+            hiddenCards.Clear();
+            for (int i = 0; i < 40; i++)
+            {
+                hiddenCards.Add(allCards[i]);
+            }
+        }
+
+        // EXIT the game
+        private void exitButton_Click(object sender, EventArgs e)
+        {
+            this.Close();
+        }
+
+        // START the game
+        private void startButton_Click(object sender, EventArgs e)
+        {
+            // NOTE: DO NOT DO ANYTHING HERE EXCEPT CALL INITIALIZE()
+            initializeGame();
+            //playerTurn();
+        }
+
+        // Ten billion card button clicks.
+        private void cardPic0_Click(object sender, EventArgs e)
+        {
+            playerClickCard(cardPic0);
+        }
+
+.
+.
+.
+
+        // I HATE MICROSOFT.
+        private void dialogTimer_Ticker(object sender, EventArgs e)
+        {
+            if (speechChars.Count != 0)
+            {
+                dialogLabel.Text = dialogLabel.Text + speechChars[0].ToString();
+                speechChars.RemoveAt(0);
+            }
+            else
+            {
+                dialogTimer.Stop();
+            }
+        }
+
+        private void startTurnButton_Click(object sender, EventArgs e)
+        {
+            playerTurn();
+        }
+
+        // Just so that the player gets a couple of seconds to register the change in turns.
+        private void computerTurnDelayTimer_Tick(object sender, EventArgs e)
+        {
+            if (computerDelay > 0)
+            {
+                computerDelay = computerDelay - 1;
+            }
+            else
+            {
+                whoseTurn = "computer";
+
+                //Stop this timer.
+                computerTurnDelayTimer.Stop();
+
+                // Flip the player's last mis-matched cards over.
+                restoreFaceUpCards();
+
+                // Start the computer's turn timer.
+                turnTimer.Start();
+            }
+
+        }
+
+        // Delay the player turn's reset a few seconds.
+        private void playerTurnDelayTimer_Tick(object sender, EventArgs e)
+        {
+            if (playerDelay > 0)
+            {
+                playerDelay = playerDelay - 1;
+            }
+            else
+            {
+                playerTurnDelayTimer.Stop();
+                removeMatch();
+                playerTurn();
+            }
+        }
+
+        // Splash menu start-up.
+        private void splashStartButton_Click(object sender, EventArgs e)
+        {
+            splashStartButton.Visible = false;
+            startPlayerDrinkChoices.Visible = true;
+            instructionsLabel1.Visible = true;
+            radioButton2.Checked = true; // I shouldn't have to do this, but whatever.
+        }
+
+        // Player selects her beverage.
+        private void playerDrinkButton_Click(object sender, EventArgs e)
+        {
+            // Make sure something was selected.
+            if ((sodaRadioButton.Checked == false) && (beerRadioButton.Checked == false) && (spiritsRadioButton.Checked == false) && (cocktailRadioButton.Checked == false))
+            {
+                // Pick one!
+                MessageBox.Show("Memorization is a thirsty business. Please choose a drink.");
+            }
+            else
+            {
+                // Beverage selected.
+                if (sodaRadioButton.Checked == true)
+                {
+                    playerBeverage = "soda";
+                }
+                else if (beerRadioButton.Checked == true)
+                {
+                    playerBeverage = "beer";
+                }
+                else if (spiritsRadioButton.Checked == true)
+                {
+                    playerBeverage = "spirits";
+                }
+                else if (cocktailRadioButton.Checked == true)
+                {
+                    playerBeverage = "cocktail";
+                }
+
+                // Set up the next choice: what will the computer drink?
+                playerDrinkButton.Visible = false;
+                startCompDrinkChoices.Visible = true;
+                instructionsLabel2.Visible = true;
+            }
+        }
+
+        // Player selects the computer's beverage.
+        private void compDrinkButton_Click(object sender, EventArgs e)
+        {
+            // Make sure something was selected.
+            if ((drPixelRadioButton.Checked == false) && (coltRadioButton.Checked == false) && (jimBeamRadioButton.Checked == false) && (hexRadioButton.Checked == false))
+            {
+                // Pick one!
+                MessageBox.Show("You don't really want to drink alone, do you?");
+            }
+            else
+            {
+                // Beverage selected.
+                if (drPixelRadioButton.Checked == true)
+                {
+                    computerBeverage = "soda";
+                }
+                else if (coltRadioButton.Checked == true)
+                {
+                    computerBeverage = "beer";
+                }
+                else if (jimBeamRadioButton.Checked == true)
+                {
+                    computerBeverage = "spirits";
+                }
+                else if (hexRadioButton.Checked == true)
+                {
+                    computerBeverage = "cocktail";
+                }
+
+                // Get ready to start the game.
+                compDrinkButton.Visible = false;
+                instructionsLabel3.Visible = true;
+                startButton.Visible = true;
+            }
+        }
+
+        // Adjust the drunk meter and swap beverage pics.
+        private void drinkUp()
+        {
+
+            // I tried doing this in a much more complicated way,
+            // but then current[player|computer]DrinkPic wasn't
+            // getting updated. Phooey.
+
+            if (whoseTurn == "player")
+            {
+                // Refills on the house.
+                if (currentPlayerDrinkPic == 0)
+                {
+                    currentPlayerDrinkPic = 4;
+                }
+                else
+                {
+                    currentPlayerDrinkPic = currentPlayerDrinkPic - 1;
+                }
+                
+                // Update the picture.
+                switch (playerBeverage)
+                {
+                    case "soda":
+                        playerDrinkPic.Image = sodaImages[currentPlayerDrinkPic];
+                        break;
+
+                    case "beer":
+                        playerDrinkPic.Image = beerImages[currentPlayerDrinkPic];
+                        break;
+
+                    case "spirits":
+                        playerDrinkPic.Image = spiritsImages[currentPlayerDrinkPic];
+                        break;
+
+                    case "cocktail":
+                        playerDrinkPic.Image = cocktailImages[currentPlayerDrinkPic];
+                        break;
+                }
+            }
+            else
+            {
+                // Computer gets bonus code that decreases sobriety.
+                // Yes, this is how I spend my free time...
+                if (currentComputerDrinkPic == 0)
+                {
+                    currentComputerDrinkPic = 4;
+                }
+                else
+                {
+                    currentComputerDrinkPic = currentComputerDrinkPic - 1;
+                }
+
+                if (howDrunk < 3)
+                {
+                    if (intoxicationMeter >= 10)
+                    {
+                        howDrunk = howDrunk + 1;
+                        intoxicationMeter = 0;
+                    }
+                    else
+                    {
+                        intoxicationMeter = intoxicationMeter + howIntoxicating[Array.IndexOf(drinkTypes, computerBeverage)];
+                    }
+                }
+
+                switch (computerBeverage)
+                {
+                    case "soda":
+                        computerDrinkPic.Image = sodaImages[currentComputerDrinkPic];
+                        break;
+
+                    case "beer":
+                        computerDrinkPic.Image = beerImages[currentComputerDrinkPic];
+                        break;
+
+                    case "spirits":
+                        computerDrinkPic.Image = spiritsImages[currentComputerDrinkPic];
+                        break;
+
+                    case "cocktail":
+                        computerDrinkPic.Image = cocktailImages[currentComputerDrinkPic];
+                        break;
+                }
+            }
+        }
+
+        // Cheers!
+        private void playerDrinkPic_Click(object sender, EventArgs e)
+        {
+            // I might enable this later. For now, let's make it automated.
+        }
+
+        // Debug ON
+        private void radioButton1_CheckedChanged(object sender, EventArgs e)
+        {
+            debugLabel.Visible = true;
+        }
+
+        // Debug OFF
+        private void radioButton2_CheckedChanged(object sender, EventArgs e)
+        {
+            debugLabel.Visible = false;
+        }
+    }
+}
